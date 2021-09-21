@@ -1,0 +1,93 @@
+version: "3.8"
+
+services:
+
+  nuxtjs:
+    restart: unless-stopped
+    build : ./src/app/
+    container_name: nuxt-container
+    volumes:
+      - ./src/app:/app/nuxt
+      - /app/nuxt/node_modules
+      - /app/nuxt/.nuxt
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:1.21
+    container_name: nginx-container
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./src/laravel:/app/laravel
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - php
+      - nuxtjs
+
+  mysql :
+    image: mysql:8
+    container_name: mysql-container
+    restart: unless-stopped
+    env_file:
+      - ./services/mysql/.env
+    ports:
+      - "33061:3306"
+    volumes:
+      - mysql-db:/var/lib/mysql
+
+  mongo :
+    image: mongo:latest
+    container_name: mongo-container
+    restart: unless-stopped
+    ports:
+        - 27017:27017
+    env_file:
+      - ./services/mongo/.env
+    volumes:
+      - mongo-db:/data/db
+
+  redis:
+    build : ./services/redis/
+    container_name: redis-container
+    restart: unless-stopped
+    volumes:
+      - redis-db:/data
+    ports:
+      - 6379:6379
+
+  php:
+    container_name: php-container
+    build: ./src/laravel
+    restart: unless-stopped
+    volumes:
+      - ./src/laravel:/app/laravel:delegated
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - 9000:9000
+
+  supervisor:
+    build: ./services/supervisor/
+    container_name: supervisor-container
+    restart: unless-stopped
+    volumes:
+      - ./src/laravel:/app/laravel
+      - ./services/supervisor/conf.d:/etc/supervisor/conf.d
+      - ./services/supervisor/logs:/var/log
+    depends_on:
+      - php
+      - mysql
+      - redis
+
+# Adding volume to below
+# volume data wont delete after container downed or deleted
+volumes:
+  mysql-db:
+    driver : local
+  mongo-db:
+    driver : local
+  redis-db:
+    driver : local

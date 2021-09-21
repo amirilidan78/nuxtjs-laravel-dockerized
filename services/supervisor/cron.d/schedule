@@ -1,0 +1,1 @@
+* * * * * /usr/local/bin/php /app/laravel/artisan schedule:run >> /var/log/cron.log 2>&1
